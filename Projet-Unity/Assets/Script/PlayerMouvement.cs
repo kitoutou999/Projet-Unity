@@ -56,8 +56,10 @@ public class PlayerMouvement : MonoBehaviour
         air
     }
 
+    private Animator anim;
     private void Start()
     {
+        anim = GetComponentInChildren<Animator>();
         rb = GetComponent<Rigidbody>();
         rb.freezeRotation = true;
 
@@ -130,6 +132,8 @@ public class PlayerMouvement : MonoBehaviour
         {
             state = MovementState.sprinting;
             moveSpeed = sprintSpeed;
+            anim.SetFloat("Speed",1);
+
         }
 
         // Mode - Marche = Vitesse de marche normal si on appuie sur aucune touche hors deplacement
@@ -137,6 +141,7 @@ public class PlayerMouvement : MonoBehaviour
         {
             state = MovementState.walking;
             moveSpeed = walkSpeed;
+            anim.SetFloat("Speed",0);
         }
 
         // Mode - Air = quand on ne touche pas le sol(ne peut sauter)
@@ -144,6 +149,8 @@ public class PlayerMouvement : MonoBehaviour
         {
             state = MovementState.air;
         }
+
+
     }
 
     private void MovePlayer()
@@ -213,7 +220,7 @@ public class PlayerMouvement : MonoBehaviour
 
     private bool SurPente()
     {
-        if(Physics.Raycast(transform.position, Vector3.down, out penteHit, playerHeight * 0.5f + 0.3f))
+        if(Physics.Raycast(transform.position, Vector3.down, out penteHit, playerHeight * 0.5f + 0.5f))
         {
             float angle = Vector3.Angle(Vector3.up, penteHit.normal);
             return angle < maxPenteAngle && angle != 0;
@@ -226,4 +233,7 @@ public class PlayerMouvement : MonoBehaviour
     {
         return Vector3.ProjectOnPlane(moveDirection, penteHit.normal).normalized;
     }
+
+    
+    
 }
