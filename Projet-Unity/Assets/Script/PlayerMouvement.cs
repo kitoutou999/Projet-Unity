@@ -23,6 +23,10 @@ public class PlayerMouvement : MonoBehaviour
     private float startYScale;
 
     [Header("Keybinds")]
+    public KeyCode walkKey = KeyCode.Z;
+    public KeyCode leftKey = KeyCode.Q;
+    public KeyCode backKey = KeyCode.S;
+    public KeyCode rightKey = KeyCode.D;
     public KeyCode jumpKey = KeyCode.Space;
     public KeyCode sprintKey = KeyCode.LeftShift;
     public KeyCode crouchKey = KeyCode.LeftControl;
@@ -53,6 +57,7 @@ public class PlayerMouvement : MonoBehaviour
         walking,
         sprinting,
         crouching,
+        idle,
         air
     }
 
@@ -100,6 +105,7 @@ public class PlayerMouvement : MonoBehaviour
             readyToJump = false;
 
             Jump();
+            
 
             Invoke(nameof(ResetJump), jumpCooldown);
         }
@@ -117,7 +123,8 @@ public class PlayerMouvement : MonoBehaviour
             transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
         }
     }
-
+    
+    
     private void StateHandler()
     {
         // Mode - Accroupie = reduction de vitesse et state
@@ -125,29 +132,86 @@ public class PlayerMouvement : MonoBehaviour
         {
             state = MovementState.crouching;
             moveSpeed = crouchSpeed;
+            anim.SetFloat("Speed",8);
         }
 
         // Mode - sprint = Augmentation de vitesse
-        else if(grounded && Input.GetKey(sprintKey))
+        else if(grounded && Input.GetKey(sprintKey) && Input.GetKey(walkKey))
         {
             state = MovementState.sprinting;
             moveSpeed = sprintSpeed;
-            anim.SetFloat("Speed",1);
+            anim.SetFloat("Speed",6);
 
         }
 
         // Mode - Marche = Vitesse de marche normal si on appuie sur aucune touche hors deplacement
-        else if (grounded)
+        else if (grounded && Input.GetKey(walkKey))
         {
             state = MovementState.walking;
             moveSpeed = walkSpeed;
-            anim.SetFloat("Speed",0);
+            anim.SetFloat("Speed",11);
         }
-
+        // Decalage gauche
+        else if (grounded && Input.GetKey(leftKey))
+        {
+            state = MovementState.walking;
+            moveSpeed = walkSpeed;
+            anim.SetFloat("Speed",7);
+        }
+        // Decalage droit
+        else if (grounded && Input.GetKey(rightKey))
+        {
+            state = MovementState.walking;
+            moveSpeed = walkSpeed;
+            anim.SetFloat("Speed",10);
+        }
+        // recule
+        else if (grounded && Input.GetKey(backKey))
+        {
+            state = MovementState.walking;
+            moveSpeed = walkSpeed;
+            anim.SetFloat("Speed",9);
+        }
+        // recule a gauche
+        else if (grounded && Input.GetKey(backKey) && Input.GetKey(leftKey))
+        {
+            state = MovementState.walking;
+            moveSpeed = walkSpeed;
+            anim.SetFloat("Speed",3);
+        }
+        // recule a droit
+        else if (grounded && Input.GetKey(backKey) && Input.GetKey(rightKey))
+        {
+            state = MovementState.walking;
+            moveSpeed = walkSpeed;
+            anim.SetFloat("Speed",4);
+        }
+        // avance a droit
+        else if (grounded && Input.GetKey(walkKey) && Input.GetKey(rightKey))
+        {
+            state = MovementState.walking;
+            moveSpeed = walkSpeed;
+            anim.SetFloat("Speed",2);
+        }
+        // avance a gauche
+        else if (grounded && Input.GetKey(walkKey) && Input.GetKey(leftKey))
+        {
+            state = MovementState.walking;
+            moveSpeed = walkSpeed;
+            anim.SetFloat("Speed",1);
+        }
         // Mode - Air = quand on ne touche pas le sol(ne peut sauter)
-        else
+        else if (!grounded )
         {
             state = MovementState.air;
+            anim.SetFloat("Speed",5);    
+        }
+        // Idle(afk)
+        else 
+        { 
+            anim.SetFloat("Speed",0);
+            state = MovementState.idle;
+            moveSpeed = walkSpeed;  
         }
 
 
@@ -205,11 +269,14 @@ public class PlayerMouvement : MonoBehaviour
     private void Jump()
     {
         sortiePente = true;
+        
+        
 
         // reset y vitesse pour des saut equivalent
         rb.velocity = new Vector3(rb.velocity.x, 0f, rb.velocity.z);
 
         rb.AddForce(transform.up * jumpForce, ForceMode.Impulse);
+        
     }
     private void ResetJump()
     {
@@ -220,7 +287,7 @@ public class PlayerMouvement : MonoBehaviour
 
     private bool SurPente()
     {
-        if(Physics.Raycast(transform.position, Vector3.down, out penteHit, playerHeight * 0.5f + 0.5f))
+        if(Physics.Raycast(transform.position, Vector3.down, out penteHit, playerHeight * 0.5f))
         {
             float angle = Vector3.Angle(Vector3.up, penteHit.normal);
             return angle < maxPenteAngle && angle != 0;
