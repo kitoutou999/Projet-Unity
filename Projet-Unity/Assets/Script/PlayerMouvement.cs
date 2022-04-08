@@ -7,6 +7,8 @@ public class PlayerMouvement : MonoBehaviour
     [Header("Mouvement")]
     private float moveSpeed;
     public float walkSpeed;
+    public float swimSpeed;
+
     public float sprintSpeed;
 
     public float groundDrag;
@@ -34,7 +36,10 @@ public class PlayerMouvement : MonoBehaviour
     [Header("Ground Check")]
     public float playerHeight;
     public LayerMask whatIsGround;
+    public LayerMask whatIsWater;
+
     bool grounded;
+    bool swim;
 
     [Header("Verif Angle Pente")]
     public float maxPenteAngle;
@@ -77,6 +82,9 @@ public class PlayerMouvement : MonoBehaviour
     {
         // ground check
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
+
+        swim = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsWater);
+
 
         MyInput();
         SpeedControl();
@@ -201,10 +209,15 @@ public class PlayerMouvement : MonoBehaviour
             anim.SetFloat("Speed",1);
         }
         // Mode - Air = quand on ne touche pas le sol(ne peut sauter)
-        else if (!grounded )
+        else if (!grounded && !swim)
         {
             state = MovementState.air;
             anim.SetFloat("Speed",5);    
+        }
+        else if (swim && !Input.GetKey(walkKey) && !Input.GetKey(backKey) && !Input.GetKey(leftKey) && !Input.GetKey(rightKey))
+        {
+            anim.SetFloat("Speed",12); 
+            moveSpeed = swimSpeed;  
         }
         // Idle(afk)
         else 
