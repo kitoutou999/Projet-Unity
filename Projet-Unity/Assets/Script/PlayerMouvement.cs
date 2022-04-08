@@ -7,7 +7,12 @@ public class PlayerMouvement : MonoBehaviour
     [Header("Mouvement")]
     private float moveSpeed;
     public float walkSpeed;
+    public float backSpeed;
+    public float strafeSpeed;
+    public float swimSpeedafk;
     public float swimSpeed;
+
+
 
     public float sprintSpeed;
 
@@ -21,8 +26,7 @@ public class PlayerMouvement : MonoBehaviour
 
     [Header("S'accroupir")]
     public float crouchSpeed;
-    public float crouchYScale;
-    private float startYScale;
+    public CapsuleCollider playerCollider ;
 
     [Header("Keybinds")]
     public KeyCode walkKey = KeyCode.Z;
@@ -62,6 +66,7 @@ public class PlayerMouvement : MonoBehaviour
         walking,
         sprinting,
         crouching,
+        swim,
         idle,
         air
     }
@@ -71,11 +76,13 @@ public class PlayerMouvement : MonoBehaviour
     {
         anim = GetComponentInChildren<Animator>();
         rb = GetComponent<Rigidbody>();
+        
         rb.freezeRotation = true;
 
         readyToJump = true;
 
-        startYScale = transform.localScale.y;
+        
+        
     }
 
     private void Update()
@@ -119,32 +126,37 @@ public class PlayerMouvement : MonoBehaviour
         }
 
         // Debut de l'accroupie qui nous retrecie
-        if (Input.GetKeyDown(crouchKey))
+        
+        if (!Input.GetKeyDown(crouchKey))
         {
-            transform.localScale = new Vector3(transform.localScale.x, crouchYScale, transform.localScale.z);
-            rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+            playerCollider.height = 2;
+            playerCollider.center = new Vector3(0.03360176f,0.8391673f,0.1618079f);
         }
+        
 
-        // Arret de l'accroupie et on reprend notre forme du debut
-        if (Input.GetKeyUp(crouchKey))
-        {
-            transform.localScale = new Vector3(transform.localScale.x, startYScale, transform.localScale.z);
-        }
+        
     }
     
     
     private void StateHandler()
     {
         // Mode - Accroupie = reduction de vitesse et state
-        if (Input.GetKey(crouchKey))
+        if (Input.GetKey(crouchKey) && !swim)
         {
             state = MovementState.crouching;
             moveSpeed = crouchSpeed;
+
+
+            playerCollider.height = 1.4f;
+            playerCollider.center = new Vector3(0.03360176f,0.5f,0.1618079f);
+            rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+
+
             anim.SetFloat("Speed",8);
         }
 
         // Mode - sprint = Augmentation de vitesse
-        else if(grounded && Input.GetKey(sprintKey) && Input.GetKey(walkKey))
+        else if(grounded && !swim && Input.GetKey(sprintKey) && Input.GetKey(walkKey))
         {
             state = MovementState.sprinting;
             moveSpeed = sprintSpeed;
@@ -153,56 +165,56 @@ public class PlayerMouvement : MonoBehaviour
         }
 
         // Mode - Marche = Vitesse de marche normal si on appuie sur aucune touche hors deplacement
-        else if (grounded && Input.GetKey(walkKey))
+        else if (grounded && !swim && Input.GetKey(walkKey))
         {
             state = MovementState.walking;
             moveSpeed = walkSpeed;
             anim.SetFloat("Speed",11);
         }
         // Decalage gauche
-        else if (grounded && Input.GetKey(leftKey))
+        else if (grounded && !swim && Input.GetKey(leftKey))
         {
             state = MovementState.walking;
-            moveSpeed = walkSpeed;
+            moveSpeed = strafeSpeed;
             anim.SetFloat("Speed",7);
         }
         // Decalage droit
-        else if (grounded && Input.GetKey(rightKey))
+        else if (grounded && !swim && Input.GetKey(rightKey))
         {
             state = MovementState.walking;
-            moveSpeed = walkSpeed;
+            moveSpeed = strafeSpeed;
             anim.SetFloat("Speed",10);
         }
         // recule
-        else if (grounded && Input.GetKey(backKey))
+        else if (grounded && !swim && Input.GetKey(backKey))
         {
             state = MovementState.walking;
-            moveSpeed = walkSpeed;
+            moveSpeed = backSpeed;
             anim.SetFloat("Speed",9);
         }
         // recule a gauche
-        else if (grounded && Input.GetKey(backKey) && Input.GetKey(leftKey))
+        else if (grounded && !swim && Input.GetKey(backKey) && Input.GetKey(leftKey))
         {
             state = MovementState.walking;
-            moveSpeed = walkSpeed;
+            moveSpeed = backSpeed;
             anim.SetFloat("Speed",3);
         }
         // recule a droit
-        else if (grounded && Input.GetKey(backKey) && Input.GetKey(rightKey))
+        else if (grounded && !swim && Input.GetKey(backKey) && Input.GetKey(rightKey))
         {
             state = MovementState.walking;
-            moveSpeed = walkSpeed;
+            moveSpeed = backSpeed;
             anim.SetFloat("Speed",4);
         }
         // avance a droit
-        else if (grounded && Input.GetKey(walkKey) && Input.GetKey(rightKey))
+        else if (grounded  && !swim && Input.GetKey(walkKey) && Input.GetKey(rightKey))
         {
             state = MovementState.walking;
             moveSpeed = walkSpeed;
             anim.SetFloat("Speed",2);
         }
         // avance a gauche
-        else if (grounded && Input.GetKey(walkKey) && Input.GetKey(leftKey))
+        else if (grounded && !swim && Input.GetKey(walkKey) && Input.GetKey(leftKey))
         {
             state = MovementState.walking;
             moveSpeed = walkSpeed;
@@ -214,11 +226,20 @@ public class PlayerMouvement : MonoBehaviour
             state = MovementState.air;
             anim.SetFloat("Speed",5);    
         }
-        else if (swim && !Input.GetKey(walkKey) && !Input.GetKey(backKey) && !Input.GetKey(leftKey) && !Input.GetKey(rightKey))
+        // Mode - swim = quand on ne touche pas le sol mais de l'eau
+        else if (swim && !Input.GetKey(sprintKey) )
         {
             anim.SetFloat("Speed",12); 
+            state = MovementState.swim;
+            moveSpeed = swimSpeedafk;  
+        }
+        else if (swim && Input.GetKey(sprintKey) )
+        {
+            anim.SetFloat("Speed",13); 
+            state = MovementState.swim;
             moveSpeed = swimSpeed;  
         }
+
         // Idle(afk)
         else 
         { 
