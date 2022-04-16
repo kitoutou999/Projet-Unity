@@ -76,6 +76,9 @@ public class PlayerMouvement : MonoBehaviour
     {
         anim = GetComponentInChildren<Animator>();
         rb = GetComponent<Rigidbody>();
+
+        state = MovementState.walking;
+        moveSpeed = walkSpeed;
         
         rb.freezeRotation = true;
 
@@ -84,13 +87,29 @@ public class PlayerMouvement : MonoBehaviour
         
         
     }
-
+    RaycastHit hit;
+    private bool uncrouch;
     private void Update()
     {
+
+        Debug.DrawRay(transform.position, transform.up * 1.8f, Color.red);
+        if (Physics.Raycast(transform.position, transform.up,out hit,1.8f))
+        {
+            Debug.Log("Le Raycast(top) touche un objt");
+            uncrouch = false;
+
+        }
+        else{
+            uncrouch =true;
+        }
+
+
+
         // ground check
         grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
 
         swim = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsWater);
+        
 
 
         MyInput();
@@ -125,131 +144,131 @@ public class PlayerMouvement : MonoBehaviour
             Invoke(nameof(ResetJump), jumpCooldown);
         }
 
-        // Debut de l'accroupie qui nous retrecie
+        // Fin de l'accroupie qui nous retrecie
         
-        if (!Input.GetKeyDown(crouchKey))
+        if (!Input.GetKeyDown(crouchKey) && uncrouch)
         {
             playerCollider.height = 2;
             playerCollider.center = new Vector3(0.03360176f,0.8391673f,0.1618079f);
+            anim.SetBool("CrouchIdle",false);
         }
-        
-
-        
     }
     
     
-    private void StateHandler()
+    void StateHandler()
     {
-        // Mode - Accroupie = reduction de vitesse et state
-        if (Input.GetKey(crouchKey) && !swim)
-        {
-            state = MovementState.crouching;
-            moveSpeed = crouchSpeed;
 
 
-            playerCollider.height = 1.4f;
-            playerCollider.center = new Vector3(0.03360176f,0.5f,0.1618079f);
-            rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+        if (grounded && !swim)
+        {   
+            
+            //Animation de marche a droite
+            if(Input.GetKey(rightKey) && !Input.GetKey(leftKey))
+            {
+                anim.SetBool("StrafeRight",true);
+            }
+            else
+            {
+                anim.SetBool("StrafeRight",false);
+            }
+            //Animation de marche a gauche
+            if(Input.GetKey(leftKey) && !Input.GetKey(rightKey))
+            {
+                anim.SetBool("StrafeLeft",true);
+            }
+            else
+            {
+                anim.SetBool("StrafeLeft",false);
+            }
+            //Animation de marche en avant
+            if (Input.GetKey(walkKey) && !Input.GetKey(backKey))
+            {
+                //Animation de sprint
+                if (Input.GetKey(sprintKey) && !Input.GetKey(rightKey) && !Input.GetKey(leftKey) && !Input.GetKey(crouchKey))
+                {
+                    anim.SetBool("Sprint",true);
+                    state = MovementState.sprinting;
+                    moveSpeed = sprintSpeed;
+                }
+                else
+                {
+                    state = MovementState.walking;
+                    moveSpeed = walkSpeed;
+                    anim.SetBool("RunForward",true);
+                    anim.SetBool("Sprint",false);
+                }
+                
+            }
+            else
+            {
+                anim.SetBool("RunForward",false);
+                anim.SetBool("Sprint",false);
+            }
+                
+            //Animation de recule
+            if (Input.GetKey(backKey) && !Input.GetKey(walkKey))
+            {
+                state = MovementState.walking;
+                moveSpeed = backSpeed;
+                anim.SetBool("RunBackward",true);
+            }
+            else{
+                anim.SetBool("RunBackward",false);
+            }
+            
+            if(!Input.GetKey(crouchKey) && uncrouch)
+            {
+                anim.SetBool("CrouchIdle",false);
+                anim.SetBool("Crouchwalk",false);
+            }
 
+            else if (Input.GetKey(crouchKey))
+            {
+                state = MovementState.crouching;
+                moveSpeed = crouchSpeed;
+                playerCollider.height = 1.4f;
+                playerCollider.center = new Vector3(0.03360176f,0.5f,0.1618079f);
 
-            anim.SetFloat("Speed",8);
-        }
+                
+                
+                if (Input.GetKey(rightKey) || Input.GetKey(leftKey) || Input.GetKey(walkKey) || Input.GetKey(backKey))
+                {
+                    anim.SetBool("Crouchwalk",true);
+                }
+                else
+                {
+                    anim.SetBool("CrouchIdle",true);
+                    anim.SetBool("Crouchwalk",false);
+                }
+                
+            }
+            else
+            {
+                if (!uncrouch)
+                {
+                    state = MovementState.crouching;
+                    moveSpeed = crouchSpeed;
+                    if (Input.GetKey(rightKey) || Input.GetKey(leftKey) || Input.GetKey(walkKey) || Input.GetKey(backKey))
+                    {
+                        anim.SetBool("Crouchwalk",true);
+                    }
+                    else
+                    {
+                        anim.SetBool("Crouchwalk",false);
+                        anim.SetBool("CrouchIdle",true);
+                        
+                    }
+                    
+                }
+            }
+            
 
-        // Mode - sprint = Augmentation de vitesse
-        else if(grounded && !swim && Input.GetKey(sprintKey) && Input.GetKey(walkKey))
-        {
-            state = MovementState.sprinting;
-            moveSpeed = sprintSpeed;
-            anim.SetFloat("Speed",6);
-
         }
-
-        // Mode - Marche = Vitesse de marche normal si on appuie sur aucune touche hors deplacement
-        else if (grounded && !swim && Input.GetKey(walkKey))
-        {
-            state = MovementState.walking;
-            moveSpeed = walkSpeed;
-            anim.SetFloat("Speed",11);
-        }
-        // Decalage gauche
-        else if (grounded && !swim && Input.GetKey(leftKey))
-        {
-            state = MovementState.walking;
-            moveSpeed = strafeSpeed;
-            anim.SetFloat("Speed",7);
-        }
-        // Decalage droit
-        else if (grounded && !swim && Input.GetKey(rightKey))
-        {
-            state = MovementState.walking;
-            moveSpeed = strafeSpeed;
-            anim.SetFloat("Speed",10);
-        }
-        // recule
-        else if (grounded && !swim && Input.GetKey(backKey))
-        {
-            state = MovementState.walking;
-            moveSpeed = backSpeed;
-            anim.SetFloat("Speed",9);
-        }
-        // recule a gauche
-        else if (grounded && !swim && Input.GetKey(backKey) && Input.GetKey(leftKey))
-        {
-            state = MovementState.walking;
-            moveSpeed = backSpeed;
-            anim.SetFloat("Speed",3);
-        }
-        // recule a droit
-        else if (grounded && !swim && Input.GetKey(backKey) && Input.GetKey(rightKey))
-        {
-            state = MovementState.walking;
-            moveSpeed = backSpeed;
-            anim.SetFloat("Speed",4);
-        }
-        // avance a droit
-        else if (grounded  && !swim && Input.GetKey(walkKey) && Input.GetKey(rightKey))
-        {
-            state = MovementState.walking;
-            moveSpeed = walkSpeed;
-            anim.SetFloat("Speed",2);
-        }
-        // avance a gauche
-        else if (grounded && !swim && Input.GetKey(walkKey) && Input.GetKey(leftKey))
-        {
-            state = MovementState.walking;
-            moveSpeed = walkSpeed;
-            anim.SetFloat("Speed",1);
-        }
-        // Mode - Air = quand on ne touche pas le sol(ne peut sauter)
-        else if (!grounded && !swim)
-        {
-            state = MovementState.air;
-            anim.SetFloat("Speed",5);    
-        }
-        // Mode - swim = quand on ne touche pas le sol mais de l'eau
-        else if (swim && !Input.GetKey(sprintKey) )
-        {
-            anim.SetFloat("Speed",12); 
-            state = MovementState.swim;
-            moveSpeed = swimSpeedafk;  
-        }
-        else if (swim && Input.GetKey(sprintKey) )
-        {
-            anim.SetFloat("Speed",13); 
-            state = MovementState.swim;
-            moveSpeed = swimSpeed;  
-        }
-
-        // Idle(afk)
-        else 
-        { 
-            anim.SetFloat("Speed",0);
-            state = MovementState.idle;
-            moveSpeed = walkSpeed;  
-        }
-
+        
 
     }
+
+       
 
     private void MovePlayer()
     {
@@ -266,12 +285,14 @@ public class PlayerMouvement : MonoBehaviour
         }
 
         // touche le sol
-        else if(grounded)
+        else if(grounded && !swim)
             rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
 
         // est dans les air
-        else if(!grounded)
+        else if(!grounded && !swim)
             rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
+        
+   
 
         // Suppretion de la gravité pour les pentes
         rb.useGravity = !SurPente();
