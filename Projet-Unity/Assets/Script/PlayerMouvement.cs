@@ -9,8 +9,7 @@ public class PlayerMouvement : MonoBehaviour
     public float walkSpeed;
     public float backSpeed;
     public float strafeSpeed;
-    public float swimSpeedafk;
-    public float swimSpeed;
+
 
 
 
@@ -40,10 +39,8 @@ public class PlayerMouvement : MonoBehaviour
     [Header("Ground Check")]
     public float playerHeight;
     public LayerMask whatIsGround;
-    public LayerMask whatIsWater;
 
     bool grounded;
-    bool swim;
 
     [Header("Verif Angle Pente")]
     public float maxPenteAngle;
@@ -66,7 +63,6 @@ public class PlayerMouvement : MonoBehaviour
         walking,
         sprinting,
         crouching,
-        swim,
         idle,
         air
     }
@@ -91,8 +87,7 @@ public class PlayerMouvement : MonoBehaviour
     private bool uncrouch;
     private void Update()
     {
-
-        Debug.DrawRay(transform.position, transform.up * 1.8f, Color.red);
+        // unsneak check
         if (Physics.Raycast(transform.position, transform.up,out hit,1.8f))
         {
             Debug.Log("Le Raycast(top) touche un objt");
@@ -104,13 +99,17 @@ public class PlayerMouvement : MonoBehaviour
         }
 
 
+        if (Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround))
+        {
+            Debug.Log("touche sol");
+            grounded = true;
 
+        }
+        else{
+            grounded =false;
+        }
         // ground check
-        grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
-
-        swim = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsWater);
-        
-
+        //grounded = Physics.Raycast(transform.position, Vector3.down, playerHeight * 0.5f + 0.2f, whatIsGround);
 
         MyInput();
         SpeedControl();
@@ -118,9 +117,16 @@ public class PlayerMouvement : MonoBehaviour
 
         // handle drag
         if (grounded)
+        {
+            anim.SetBool("Ground",true);
             rb.drag = groundDrag;
+        }
         else
+        {
+            anim.SetBool("Ground",false);
             rb.drag = 0;
+        }
+            
     }
 
     private void FixedUpdate()
@@ -134,16 +140,14 @@ public class PlayerMouvement : MonoBehaviour
         verticalInput = Input.GetAxisRaw("Vertical");
 
         // Si le joueur press espace et est au sol et est pret a sauter alors il saute avec un cooldown definie
-        if(Input.GetKey(jumpKey) && readyToJump && grounded)
+        if(Input.GetKey(jumpKey) && readyToJump && grounded )
         {
             readyToJump = false;
-
+            anim.SetBool("Jump",true);
             Jump();
-            
-
             Invoke(nameof(ResetJump), jumpCooldown);
         }
-
+        
         // Fin de l'accroupie qui nous retrecie
         
         if (!Input.GetKeyDown(crouchKey) && uncrouch)
@@ -159,27 +163,21 @@ public class PlayerMouvement : MonoBehaviour
     {
 
 
-        if (grounded && !swim)
+        if (grounded)
         {   
             
             //Animation de marche a droite
             if(Input.GetKey(rightKey) && !Input.GetKey(leftKey))
-            {
                 anim.SetBool("StrafeRight",true);
-            }
             else
-            {
                 anim.SetBool("StrafeRight",false);
-            }
+
             //Animation de marche a gauche
             if(Input.GetKey(leftKey) && !Input.GetKey(rightKey))
-            {
                 anim.SetBool("StrafeLeft",true);
-            }
             else
-            {
                 anim.SetBool("StrafeLeft",false);
-            }
+
             //Animation de marche en avant
             if (Input.GetKey(walkKey) && !Input.GetKey(backKey))
             {
@@ -264,6 +262,13 @@ public class PlayerMouvement : MonoBehaviour
             
 
         }
+        else if (!grounded && !readyToJump)
+        {
+            anim.SetBool("Jump",false);
+
+        }
+        
+        
         
 
     }
@@ -278,19 +283,20 @@ public class PlayerMouvement : MonoBehaviour
         // Sur une pente (resolution bug pour monter une pente trop incliner et rendu realiste)
         if (SurPente() && !sortiePente)
         {
-            rb.AddForce(GetPenteMoveDirection() * moveSpeed * 20f, ForceMode.Force);
+            rb.AddForce(GetPenteMoveDirection() * moveSpeed * 30f, ForceMode.Force);
 
             if (rb.velocity.y > 0)
                 rb.AddForce(Vector3.down * 80f, ForceMode.Force);
         }
 
         // touche le sol
-        else if(grounded && !swim)
+        else if(grounded )
             rb.AddForce(moveDirection.normalized * moveSpeed * 10f, ForceMode.Force);
 
         // est dans les air
-        else if(!grounded && !swim)
+        else if(!grounded )
             rb.AddForce(moveDirection.normalized * moveSpeed * 10f * airMultiplier, ForceMode.Force);
+        
         
    
 
